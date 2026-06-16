@@ -17,12 +17,12 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     Page<Notification> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
-    /** Notificações não lidas — badge da central (HU12). */
+    /** Notificações não lidas — badge da central. */
     List<Notification> findByUserIdAndReadFalseOrderByCreatedAtDesc(UUID userId);
 
     long countByUserIdAndReadFalse(UUID userId);
 
-    /** Marca todas as notificações do usuário como lidas de uma vez (HU12). */
+    /** Marca todas as notificações do usuário como lidas de uma vez. */
     @Modifying
     @Query("UPDATE Notification n SET n.read = true WHERE n.user.id = :userId AND n.read = false")
     void markAllAsReadByUserId(@Param("userId") UUID userId);
