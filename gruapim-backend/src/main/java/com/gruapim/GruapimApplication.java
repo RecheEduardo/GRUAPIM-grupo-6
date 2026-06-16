@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableScheduling
 public class GruapimApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(GruapimApplication.class, args);
     }
