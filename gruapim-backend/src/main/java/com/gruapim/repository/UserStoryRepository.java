@@ -31,4 +31,7 @@ public interface UserStoryRepository extends JpaRepository<UserStory, UUID> {
     @Modifying
     @Query("UPDATE UserStory us SET us.position = us.position - 1 WHERE us.project.id = :projectId AND us.position > :position")
     void decrementPositionsAfter(@Param("projectId") UUID projectId, @Param("position") int position);
+
+    List<UserStory> findByProjectIdOrderByPosition(UUID projectId);
+    int countByProjectId(UUID projectId);
 }

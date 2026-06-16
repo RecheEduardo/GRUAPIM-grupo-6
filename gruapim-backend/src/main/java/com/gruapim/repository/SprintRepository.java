@@ -38,4 +38,7 @@ public interface SprintRepository extends JpaRepository<Sprint, UUID> {
     /** Sprints ativas que encerram na data informada — usada pelo scheduler de notificações (HU12). */
     @Query("SELECT s FROM Sprint s WHERE s.status = 'IN_PROGRESS' AND s.endDate = :date")
     List<Sprint> findActiveSprintsEndingOn(@Param("date") LocalDate date);
+
+    List<Sprint> findByProjectIdOrderByStartDate(UUID projectId);
+    boolean existsByProjectIdAndStatus(UUID projectId, SprintStatus status);
 }
