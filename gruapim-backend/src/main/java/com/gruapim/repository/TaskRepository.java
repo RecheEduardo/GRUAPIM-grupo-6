@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,4 +53,7 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findBySprintIdOrderByColumn(@Param("sprintId") UUID sprintId);
 
     boolean existsByKanbanColumnId(UUID columnId);
+
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.story.id = :storyId AND t.status = 'DONE' AND t.updatedAt <= :before")
+    long countDoneTasksByStoryIdAndDate(UUID storyId, Instant before);
 }
