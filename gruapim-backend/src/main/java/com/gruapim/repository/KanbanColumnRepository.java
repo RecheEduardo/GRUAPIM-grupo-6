@@ -30,4 +30,6 @@ public interface KanbanColumnRepository extends JpaRepository<KanbanColumn, UUID
 
     @Query("SELECT COALESCE(MAX(kc.position), 0) FROM KanbanColumn kc WHERE kc.project.id = :projectId")
     int findMaxPositionByProjectId(@Param("projectId") UUID projectId);
+
+    List<KanbanColumn> findByProjectIdOrderByPosition(UUID projectId);
 }

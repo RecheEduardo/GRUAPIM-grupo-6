@@ -50,4 +50,6 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
         ORDER BY t.kanbanColumn.position ASC NULLS LAST
         """)
     List<Task> findBySprintIdOrderByColumn(@Param("sprintId") UUID sprintId);
+
+    boolean existsByKanbanColumnId(UUID columnId);
 }
