@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/user-stories")
+@RequestMapping("/user-stories")
 @RequiredArgsConstructor
 public class UserStoryController {
 

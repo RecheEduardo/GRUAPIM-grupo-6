@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/sprints")
+@RequestMapping("/sprints")
 @RequiredArgsConstructor
 public class SprintController {
 
