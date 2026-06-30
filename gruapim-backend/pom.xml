@@ -62,6 +62,12 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
+        <!-- AMQP / RabbitMQ (publicação de eventos de domínio) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- Actuator (health, metrics) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

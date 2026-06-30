@@ -6,6 +6,8 @@ import com.gruapim.dto.request.CreateTaskRequest;
 import com.gruapim.dto.request.MoveTaskRequest;
 import com.gruapim.dto.request.UpdateTaskRequest;
 import com.gruapim.dto.response.TaskResponse;
+import com.gruapim.event.DomainEventPublisher;
+import com.gruapim.event.TaskAssignedEvent;
 import com.gruapim.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class TaskService {
     private final UserRepository userRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
     private final TaskStatusHistoryRepository taskStatusHistoryRepository;
+    private final DomainEventPublisher eventPublisher;
 
     @Transactional
     public TaskResponse create(CreateTaskRequest request, String creatorEmail) {
@@ -47,7 +50,14 @@ public class TaskService {
                     .orElseThrow(() -> new IllegalArgumentException("Coluna Kanban não encontrada")));
         }
 
-        return TaskResponse.from(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+
+        if (saved.getAssignee() != null) {
+            eventPublisher.publishTaskAssigned(new TaskAssignedEvent(
+                    saved.getId(), saved.getTitle(), saved.getAssignee().getId(), creator.getName()));
+        }
+
+        return TaskResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
@@ -66,6 +76,7 @@ public class TaskService {
     public TaskResponse update(UUID id, UpdateTaskRequest request, String editorEmail) {
         Task task = findOrThrow(id);
         TaskStatus previousStatus = task.getStatus();
+        UUID previousAssigneeId = task.getAssignee() != null ? task.getAssignee().getId() : null;
 
         task.setTitle(request.title());
         task.setDescription(request.description());
@@ -80,7 +91,15 @@ public class TaskService {
             task.setKanbanColumn(kanbanColumnRepository.findById(request.kanbanColumnId()).orElse(null));
         }
 
-        return TaskResponse.from(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+
+        if (saved.getAssignee() != null && !saved.getAssignee().getId().equals(previousAssigneeId)) {
+            String editorName = userRepository.findByEmail(editorEmail).map(User::getName).orElse(editorEmail);
+            eventPublisher.publishTaskAssigned(new TaskAssignedEvent(
+                    saved.getId(), saved.getTitle(), saved.getAssignee().getId(), editorName));
+        }
+
+        return TaskResponse.from(saved);
     }
 
     @Transactional
