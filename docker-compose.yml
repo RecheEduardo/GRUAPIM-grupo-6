@@ -1,5 +1,6 @@
 services:
-  db:
+  # ---------------------------------------------------------------- Infra
+  postgres-core:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: gruapim
@@ -8,29 +9,105 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_core_data:/var/lib/postgresql/data
+    networks: [gruapim-net]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gruapim -d gruapim"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  app:
+  postgres-collab:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gruapim_collab
+      POSTGRES_USER: gruapim
+      POSTGRES_PASSWORD: gruapim123
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_collab_data:/var/lib/postgresql/data
+    networks: [gruapim-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gruapim -d gruapim_collab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    networks: [gruapim-net]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ------------------------------------------------------------- Serviços
+  gruapim-backend:
     build:
       context: ./gruapim-backend
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:postgresql://db:5432/gruapim
+      DB_URL: jdbc:postgresql://postgres-core:5432/gruapim
       DB_USER: gruapim
       DB_PASSWORD: gruapim123
-      JWT_SECRET: docker-local-secret-key-at-least-256-bits-long-for-hs256-replace-in-real-prod
+      JWT_SECRET: docker-shared-secret-key-at-least-256-bits-long-for-hs256-replace-in-prod
       JWT_EXPIRATION: 86400000
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+      RABBITMQ_HOST: rabbitmq
     ports:
       - "8080:8080"
+    networks: [gruapim-net]
     depends_on:
-      db:
+      postgres-core:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
+  collaboration-service:
+    build:
+      context: ./gruapim-collaboration-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres-collab:5432/gruapim_collab
+      DB_USER: gruapim
+      DB_PASSWORD: gruapim123
+      # Mesmo segredo do backend — confiança stateless via JWT compartilhado.
+      JWT_SECRET: docker-shared-secret-key-at-least-256-bits-long-for-hs256-replace-in-prod
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+      RABBITMQ_HOST: rabbitmq
+    ports:
+      - "8081:8081"
+    networks: [gruapim-net]
+    depends_on:
+      postgres-collab:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ./gruapim-gateway
+    environment:
+      GATEWAY_PORT: 8090
+      BACKEND_URI: http://gruapim-backend:8080
+      COLLAB_URI: http://collaboration-service:8081
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+    ports:
+      - "8090:8090"
+    networks: [gruapim-net]
+    depends_on:
+      - gruapim-backend
+      - collaboration-service
+
+networks:
+  gruapim-net:
+    driver: bridge
+
 volumes:
-  postgres_data:
+  postgres_core_data:
+  postgres_collab_data:

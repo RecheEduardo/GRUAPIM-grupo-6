@@ -18,6 +18,25 @@ server:
   servlet:
     context-path: /api
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+resilience4j:
+  retry:
+    instances:
+      eventPublisher:
+        max-attempts: 3
+        wait-duration: 1s
+  circuitbreaker:
+    instances:
+      eventPublisher:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+
 logging:
   level:
     com.gruapim: INFO
