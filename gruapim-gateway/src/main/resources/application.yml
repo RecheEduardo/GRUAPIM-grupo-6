@@ -1,0 +1,40 @@
+server:
+  # Ponto único de entrada público. O cliente não percebe o split de serviços.
+  port: ${GATEWAY_PORT:8090}
+
+spring:
+  application:
+    name: gruapim-gateway
+  cloud:
+    gateway:
+      # Remove cabeçalhos CORS duplicados (gateway + serviço downstream).
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+      routes:
+        # Contexto de Colaboração → microsserviço (8081). Rotas específicas primeiro.
+        - id: collaboration-rest
+          uri: ${COLLAB_URI:http://localhost:8081}
+          predicates:
+            - Path=/api/chat/**,/api/notifications/**,/api/meeting-notes/**
+        - id: collaboration-ws
+          uri: ${COLLAB_URI:http://localhost:8081}
+          predicates:
+            - Path=/ws/**
+        # Demais rotas → monólito core (8080).
+        - id: backend-core
+          uri: ${BACKEND_URI:http://localhost:8080}
+          predicates:
+            - Path=/api/**
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+            allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+            allowedHeaders: [Authorization, Content-Type, X-Requested-With]
+            allowCredentials: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
