@@ -41,7 +41,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtService.generateToken(toSpringUser(user));
+        String token = jwtService.generateToken(toSpringUser(user), user.getId(), user.getName());
         return new AuthResponse(token, user.getId(), user.getName(), user.getEmail(), user.getRole());
     }
 
@@ -51,7 +51,7 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
         User user = userRepository.findByEmail(request.email()).orElseThrow();
-        String token = jwtService.generateToken(toSpringUser(user));
+        String token = jwtService.generateToken(toSpringUser(user), user.getId(), user.getName());
         return new AuthResponse(token, user.getId(), user.getName(), user.getEmail(), user.getRole());
     }
 
