@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    baseline-on-migrate: false
+
+gruapim:
+  security:
+    jwt:
+      # Deve ser idêntico ao JWT_SECRET do gruapim-backend (serviço de Identidade).
+      secret: ${JWT_SECRET}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    com.gruapim.collaboration: WARN
+    org.springframework.security: WARN

@@ -1,9 +1,9 @@
 # ===========================
-# Maven
+# Maven / Build (Java)
 # ===========================
 **/target/
-!**/src/main/**/target/
-!**/src/test/**/target/
+**/build/
+**/out/
 .mvn/wrapper/maven-wrapper.jar
 .mvn/wrapper/maven-wrapper.properties
 
