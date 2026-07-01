@@ -1,0 +1,707 @@
+{
+  "info": {
+    "name": "GRUAPIM — Suite completa (gateway)",
+    "description": "Fluxo end-to-end da plataforma GRUAPIM através do API Gateway. Cobre autenticação, usuários, projetos, membros, user stories, sprints, kanban, tasks, git, burndown e o microsserviço de colaboração (notificações, atas e histórico de chat). Os requests são encadeados por variáveis e devem ser executados em ordem (Newman roda assim por padrão).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8090" },
+    { "key": "aliceName", "value": "Alice Scrum" },
+    { "key": "aliceEmail", "value": "alice@gruapim.dev" },
+    { "key": "alicePassword", "value": "alice12345" },
+    { "key": "bobName", "value": "Bob Dev" },
+    { "key": "bobEmail", "value": "bob@gruapim.dev" },
+    { "key": "bobPassword", "value": "bob12345" }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticação",
+      "item": [
+        {
+          "name": "Registrar Alice (Scrum Master)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('registro aceito ou já existente', function () {",
+            "  pm.expect([201, 400]).to.include(pm.response.code);",
+            "});"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{aliceName}}\",\n  \"email\": \"{{aliceEmail}}\",\n  \"password\": \"{{alicePassword}}\",\n  \"role\": \"SCRUM_MASTER\"\n}" }
+          }
+        },
+        {
+          "name": "Login Alice",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('retorna token', () => pm.expect(j.token).to.be.a('string'));",
+            "pm.collectionVariables.set('aliceToken', j.token);",
+            "pm.collectionVariables.set('aliceId', j.userId);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{aliceEmail}}\",\n  \"password\": \"{{alicePassword}}\"\n}" }
+          }
+        },
+        {
+          "name": "Registrar Bob (Developer)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('registro aceito ou já existente', function () {",
+            "  pm.expect([201, 400]).to.include(pm.response.code);",
+            "});"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{bobName}}\",\n  \"email\": \"{{bobEmail}}\",\n  \"password\": \"{{bobPassword}}\",\n  \"role\": \"DEVELOPER\"\n}" }
+          }
+        },
+        {
+          "name": "Login Bob",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('bobToken', j.token);",
+            "pm.collectionVariables.set('bobId', j.userId);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{bobEmail}}\",\n  \"password\": \"{{bobPassword}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Usuários",
+      "item": [
+        {
+          "name": "Meu perfil (Alice)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('e-mail confere', () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('aliceEmail')));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/users/me"
+          }
+        },
+        {
+          "name": "Atualizar perfil (Alice)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/users/me",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{aliceName}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Projetos",
+      "item": [
+        {
+          "name": "Criar projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('projectId', j.id);",
+            "pm.test('id gerado', () => pm.expect(j.id).to.be.a('string'));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Projeto GRUAPIM\",\n  \"description\": \"Plataforma de gestao Scrum do Grupo 6\"\n}" }
+          }
+        },
+        {
+          "name": "Listar meus projetos",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('retorna lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/projects"
+          }
+        },
+        {
+          "name": "Buscar projeto por id",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/projects/{{projectId}}"
+          }
+        },
+        {
+          "name": "Atualizar projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{projectId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Projeto GRUAPIM\",\n  \"description\": \"Descricao atualizada\"\n}" }
+          }
+        },
+        {
+          "name": "Adicionar membro (Bob)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('membro adicionado ou já existente', function () {",
+            "  pm.expect([201, 400, 409]).to.include(pm.response.code);",
+            "});"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{projectId}}/members",
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{bobId}}\",\n  \"role\": \"DEVELOPER\"\n}" }
+          }
+        },
+        {
+          "name": "Listar membros",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('ao menos 1 membro', () => pm.expect(pm.response.json().length).to.be.above(0));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/projects/{{projectId}}/members"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. User Stories",
+      "item": [
+        {
+          "name": "Criar user story",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('storyId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/user-stories",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"title\": \"Login de usuario\",\n  \"description\": \"Como usuario quero autenticar para acessar a plataforma\",\n  \"priority\": \"HIGH\",\n  \"storyPoints\": 5\n}" }
+          }
+        },
+        {
+          "name": "Listar stories do projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/user-stories/project/{{projectId}}"
+          }
+        },
+        {
+          "name": "Buscar story por id",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/user-stories/{{storyId}}"
+          }
+        },
+        {
+          "name": "Atualizar story",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/user-stories/{{storyId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Login de usuario\",\n  \"description\": \"Refinada\",\n  \"priority\": \"HIGH\",\n  \"status\": \"IN_PROGRESS\",\n  \"storyPoints\": 8,\n  \"position\": 0\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Sprints",
+      "item": [
+        {
+          "name": "Criar sprint",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('sprintId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/sprints",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"name\": \"Sprint 1\",\n  \"goal\": \"Entregar o MVP de autenticacao\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-15\"\n}" }
+          }
+        },
+        {
+          "name": "Adicionar story ao sprint",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/sprints/{{sprintId}}/stories",
+            "body": { "mode": "raw", "raw": "{\n  \"storyId\": \"{{storyId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Listar stories do sprint",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/sprints/{{sprintId}}/stories"
+          }
+        },
+        {
+          "name": "Buscar sprint por id",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/sprints/{{sprintId}}"
+          }
+        },
+        {
+          "name": "Atualizar sprint (iniciar)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/sprints/{{sprintId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sprint 1\",\n  \"goal\": \"Entregar o MVP de autenticacao\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-15\",\n  \"status\": \"IN_PROGRESS\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Kanban",
+      "item": [
+        {
+          "name": "Criar coluna A Fazer",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('columnId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/kanban/columns",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"name\": \"A Fazer\",\n  \"position\": 0,\n  \"terminal\": false\n}" }
+          }
+        },
+        {
+          "name": "Criar coluna Concluido (terminal)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('doneColumnId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/kanban/columns",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"name\": \"Concluido\",\n  \"position\": 2,\n  \"terminal\": true\n}" }
+          }
+        },
+        {
+          "name": "Listar colunas do projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('ao menos 2 colunas', () => pm.expect(pm.response.json().length).to.be.at.least(2));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/kanban/columns/project/{{projectId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Tasks",
+      "item": [
+        {
+          "name": "Criar task (atribuida ao Bob -> evento)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('taskId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/tasks",
+            "body": { "mode": "raw", "raw": "{\n  \"storyId\": \"{{storyId}}\",\n  \"title\": \"Implementar tela de login\",\n  \"description\": \"Form de login + chamada ao endpoint\",\n  \"assigneeId\": \"{{bobId}}\",\n  \"kanbanColumnId\": \"{{columnId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Listar tasks da story",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/tasks/story/{{storyId}}"
+          }
+        },
+        {
+          "name": "Listar tasks da coluna",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/tasks/column/{{columnId}}"
+          }
+        },
+        {
+          "name": "Atualizar task",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/tasks/{{taskId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Implementar tela de login\",\n  \"description\": \"Em andamento\",\n  \"assigneeId\": \"{{bobId}}\",\n  \"status\": \"IN_PROGRESS\",\n  \"kanbanColumnId\": \"{{columnId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Mover task para Concluido",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status DONE', () => pm.expect(pm.response.json().status).to.eql('DONE'));"
+          ] } }],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/tasks/{{taskId}}/move",
+            "body": { "mode": "raw", "raw": "{\n  \"kanbanColumnId\": \"{{doneColumnId}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Git",
+      "item": [
+        {
+          "name": "Registrar repositorio",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('repoId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/git/repositories",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"repositoryUrl\": \"https://github.com/grupo6/gruapim\",\n  \"provider\": \"GITHUB\"\n}" }
+          }
+        },
+        {
+          "name": "Listar repositorios do projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/git/repositories/project/{{projectId}}"
+          }
+        },
+        {
+          "name": "Vincular commit a task",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('commitLinkId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/git/commits",
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"repositoryId\": \"{{repoId}}\",\n  \"commitHash\": \"a1b2c3d4e5\",\n  \"commitMessage\": \"feat: tela de login\",\n  \"branchName\": \"feature/login\",\n  \"committedAt\": \"2026-06-30T12:00:00Z\"\n}" }
+          }
+        },
+        {
+          "name": "Listar commits da task",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/git/commits/task/{{taskId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Burndown",
+      "item": [
+        {
+          "name": "Burndown do sprint",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/burndown/sprint/{{sprintId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Atas de Reuniao (microsservico)",
+      "item": [
+        {
+          "name": "Criar ata (REVIEW)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('meetingNoteId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/meeting-notes",
+            "body": { "mode": "raw", "raw": "{\n  \"sprintId\": \"{{sprintId}}\",\n  \"projectId\": \"{{projectId}}\",\n  \"type\": \"REVIEW\",\n  \"discussedPoints\": \"Demo das entregas do sprint\",\n  \"decisions\": \"Aprovar incremento\",\n  \"improvementActions\": \"Automatizar deploy\"\n}" }
+          }
+        },
+        {
+          "name": "Listar atas do sprint",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/meeting-notes/sprint/{{sprintId}}"
+          }
+        },
+        {
+          "name": "Listar atas do projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/meeting-notes/project/{{projectId}}"
+          }
+        },
+        {
+          "name": "Buscar ata por id",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/meeting-notes/{{meetingNoteId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Notificacoes (microsservico)",
+      "item": [
+        {
+          "name": "Listar notificacoes (Bob)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const arr = pm.response.json();",
+            "pm.test('retorna lista', () => pm.expect(arr).to.be.an('array'));",
+            "if (arr.length > 0) { pm.collectionVariables.set('notificationId', arr[0].id); }",
+            "// Obs: a notificacao TASK_ASSIGNED chega de forma assincrona (RabbitMQ);",
+            "// pode levar instantes apos a criacao da task, ou estar vazia se o broker estiver fora."
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": "{{baseUrl}}/api/notifications"
+          }
+        },
+        {
+          "name": "Listar nao lidas (Bob)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": "{{baseUrl}}/api/notifications/unread"
+          }
+        },
+        {
+          "name": "Marcar todas como lidas (Bob)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 204', () => pm.response.to.have.status(204));"
+          ] } }],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": "{{baseUrl}}/api/notifications/read-all"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Chat (microsservico)",
+      "item": [
+        {
+          "name": "Historico do chat do projeto",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('retorna lista', () => pm.expect(pm.response.json()).to.be.an('array'));",
+            "// O envio de mensagens e via STOMP (ver stomp-chat-test.js)."
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/chat/project/{{projectId}}/history?limit=50"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Cobertura de DELETE (descartaveis)",
+      "item": [
+        {
+          "name": "Criar story descartavel",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('tempStoryId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/user-stories",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"title\": \"TEMP - sera excluida\",\n  \"priority\": \"LOW\"\n}" }
+          }
+        },
+        {
+          "name": "Excluir story descartavel",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 204', () => pm.response.to.have.status(204));"
+          ] } }],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/user-stories/{{tempStoryId}}"
+          }
+        },
+        {
+          "name": "Criar coluna descartavel",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('tempColumnId', pm.response.json().id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/kanban/columns",
+            "body": { "mode": "raw", "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"name\": \"TEMP\",\n  \"position\": 9,\n  \"terminal\": false\n}" }
+          }
+        },
+        {
+          "name": "Excluir coluna descartavel",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 204', () => pm.response.to.have.status(204));"
+          ] } }],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": "{{baseUrl}}/api/kanban/columns/{{tempColumnId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

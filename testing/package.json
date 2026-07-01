@@ -1,0 +1,19 @@
+{
+  "name": "gruapim-testing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Testes automatizados da plataforma GRUAPIM: Newman (REST) + STOMP (chat).",
+  "scripts": {
+    "test:api": "newman run gruapim.postman_collection.json -e gruapim.postman_environment.json --reporters cli",
+    "test:stomp": "node stomp-chat-test.js",
+    "test": "npm run test:api && npm run test:stomp"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  },
+  "dependencies": {
+    "@stomp/stompjs": "^7.0.0",
+    "sockjs-client": "^1.6.1",
+    "ws": "^8.18.0"
+  }
+}

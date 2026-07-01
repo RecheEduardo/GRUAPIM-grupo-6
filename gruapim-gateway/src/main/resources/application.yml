@@ -19,7 +19,8 @@ spring:
         - id: collaboration-ws
           uri: ${COLLAB_URI:http://localhost:8081}
           predicates:
-            - Path=/ws/**
+            # endpoint STOMP/SockJS fica sob o context-path /api do microsserviço
+            - Path=/api/ws/**
         # Demais rotas → monólito core (8080).
         - id: backend-core
           uri: ${BACKEND_URI:http://localhost:8080}
